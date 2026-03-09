@@ -13,7 +13,7 @@ function escapeHTML(str) {
     });
 }
 
-// ⚠️ PEGA AQUÍ LOS DATOS DE TU NUEVA CUENTA DE SUPABASE ⚠️
+// ⚠️ datos cuenta supabase ⚠️
 const supabaseUrl = 'https://uitfwvhvhqiwltxdxjeh.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpdGZ3dmh2aHFpd2x0eGR4amVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMTAzODEsImV4cCI6MjA4ODU4NjM4MX0.hhO9VjOWixggdvApkNeivCCeLekJgsY86qcbPZFW2e0';
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
