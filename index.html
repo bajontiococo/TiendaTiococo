@@ -17,15 +17,259 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="css/estilos.css">
-
-    //cambiar dirección de supabase.
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="font-sans antialiased overflow-x-hidden">
 
+    <header class="fixed top-0 w-full bg-white z-[50] border-b border-gray-50 h-20 shadow-sm transition-all duration-300 header-desktop-adjust">
+        <div class="h-full grid grid-cols-3 items-center px-4 md:px-6">
+            <div class="flex justify-start">
+                <button onclick="toggleMobileMenu()" aria-label="Abrir menú" class="lg:hidden text-2xl text-beige hover:text-black transition"><i class="fa fa-bars"></i></button>
+            </div>
+            
+            <div class="flex justify-center">
+                <div onclick="resetAndScrollToTop()" class="inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-50 shadow-sm cursor-pointer hover:bg-gray-50 transition-all active:scale-95">
+                    <i class="fa fa-hamburger text-beige text-xl"></i>
+                    <h1 class="text-base md:text-xl font-black tracking-widest text-gray-800 uppercase whitespace-nowrap">Tio<span class="text-beige">coco</span></h1>
+                </div>
+            </div>
+
+            <div class="flex justify-end items-center gap-3">
+                <div class="hidden lg:block relative group mr-2">
+                    <input type="text" id="search-desktop" onkeyup="buscar(this.value)" placeholder="Buscar hamburguesa, combo..." class="bg-gray-50/50 border border-transparent rounded-full px-5 py-2.5 w-64 text-sm focus:ring-1 focus:ring-beige focus:bg-white focus:border-beige transition-all">
+                    <i class="fa fa-search absolute right-4 top-3 text-beige"></i>
+                </div>
+                <button onclick="openAuthModal()" class="relative p-2 group" id="user-btn-header">
+                    <i class="fa fa-user text-xl text-gray-400 group-hover:text-black transition" id="user-icon"></i>
+                </button>
+                <span id="header-total" class="hidden md:block font-bold text-gray-700 text-sm opacity-0 transition-opacity duration-300">$0</span>
+                <button onclick="toggleCart()" class="relative p-2 group" id="cart-btn-header">
+                    <i class="fa fa-shopping-bag text-2xl text-gray-400 group-hover:text-black transition" id="cart-icon"></i>
+                    <span id="cart-badge" class="absolute -top-1 -right-1 bg-black text-white text-[10px] font-bold h-5 w-5 flex items-center justify-center rounded-full border-2 border-white scale-0 transition-transform duration-300">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div id="menu-overlay" class="overlay-base" onclick="handleBackAction()"></div>
+    <div id="cart-overlay" class="overlay-base" onclick="forceCloseCart()"></div>
+
+    <div id="auth-modal" class="fixed inset-0 z-[200] bg-black bg-opacity-50 hidden items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden">
+            <button onclick="closeAuthModal()" class="absolute top-4 right-4 z-50 bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition">✕</button>
+            <div class="p-8 overflow-y-auto modal-body-scroll">
+                
+                <div id="auth-login-view">
+                    <h2 class="text-2xl font-black text-gray-900 mb-6 tracking-tight">Iniciar Sesión</h2>
+                    <form id="login-form" onsubmit="iniciarSesion(event)" class="space-y-4">
+                        <input type="email" id="login-email" placeholder="Correo electrónico" required class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-beige outline-none transition text-sm">
+                        <input type="password" id="login-pass" placeholder="Contraseña" required class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-beige outline-none transition text-sm">
+                        <div class="text-right">
+                            <span onclick="mostrarRecuperarPass()" class="text-xs text-beige font-bold cursor-pointer hover:underline">¿Olvidaste tu contraseña?</span>
+                        </div>
+                        <button type="submit" id="btn-login-submit" class="w-full bg-black text-white py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-beige transition shadow-lg mt-2 text-sm">Ingresar</button>
+                    </form>
+                    <p class="text-center text-sm text-gray-500 mt-6">¿Eres nuevo? <span onclick="toggleAuthView()" class="text-beige font-black hover:underline cursor-pointer">Regístrate aquí</span></p>
+                </div>
+
+                <div id="auth-register-view" class="hidden">
+                    <h2 class="text-2xl font-black text-gray-900 mb-2 tracking-tight">Crear Cuenta</h2>
+                    <p class="text-xs text-gray-500 mb-6 uppercase font-bold tracking-widest text-beige">Datos para el delivery 🚚</p>
+                    <form id="register-form" onsubmit="registrarUsuario(event)" class="space-y-3">
+                        <input type="text" id="reg-nombre" placeholder="Nombre Completo" required class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none">
+                        <input type="text" id="reg-telefono" placeholder="Teléfono (Ej: +56912345678)" required class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none">
+                        
+                        <div class="flex gap-2">
+                            <input type="text" id="reg-calle" placeholder="Calle o Pasaje" required class="w-2/3 p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none">
+                            <input type="text" id="reg-numero" placeholder="N°" required class="w-1/3 p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none">
+                        </div>
+                        <select id="reg-region" onchange="actualizarComunas('reg')" required class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none text-gray-600">
+                            <option value="">Seleccione Región...</option>
+                        </select>
+                        <select id="reg-comuna" required class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none text-gray-600 disabled:opacity-50" disabled>
+                            <option value="">Primero seleccione Región</option>
+                        </select>
+                        <input type="text" id="reg-referencia" placeholder="Referencia (Ej: Casa portón verde)" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none">
+                        
+                        <input type="email" id="reg-email" placeholder="Correo electrónico" required class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none mt-4">
+                        <input type="email" id="reg-email-confirm" placeholder="Repite tu correo" required class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none">
+                        <input type="password" id="reg-pass" placeholder="Crea una clave (mín 6 caracteres)" required minlength="6" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none">
+                        
+                        <button type="submit" id="btn-reg-submit" class="w-full bg-black text-white py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-beige transition shadow-lg mt-2 text-sm">Crear mi cuenta</button>
+                    </form>
+                    <p class="text-center text-sm text-gray-500 mt-6">¿Ya tienes cuenta? <span onclick="toggleAuthView()" class="text-beige font-black hover:underline cursor-pointer">Inicia Sesión</span></p>
+                </div>
+
+                <div id="auth-logged-view" class="hidden">
+                    <div class="flex border-b border-gray-200 mb-4">
+                        <button id="tab-mi-perfil" class="py-2 px-4 font-bold text-sm uppercase border-b-2 border-beige text-beige" onclick="switchUserTab('perfil')">Mis Datos</button>
+                        <button id="tab-mis-pedidos" class="py-2 px-4 font-bold text-sm uppercase text-gray-500 hover:text-gray-700" onclick="switchUserTab('pedidos')">Mis Pedidos</button>
+                    </div>
+
+                    <div id="user-perfil-view">
+                        <div id="profile-readonly">
+                            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                <div><p class="text-[10px] font-bold text-gray-500 uppercase">Nombre completo</p><p class="font-medium text-gray-900 text-sm" id="display-nombre">-</p></div>
+                                <div><p class="text-[10px] font-bold text-gray-500 uppercase">Teléfono</p><p class="font-medium text-gray-900 text-sm" id="display-telefono">-</p></div>
+                                <div><p class="text-[10px] font-bold text-gray-500 uppercase">Dirección</p><p class="font-medium text-gray-900 text-sm" id="display-direccion">-</p></div>
+                                <div><p class="text-[10px] font-bold text-gray-500 uppercase">Referencia</p><p class="font-medium text-gray-900 text-sm" id="display-referencia">-</p></div>
+                            </div>
+                            <button onclick="showEditProfile()" class="w-full bg-beige text-gray-900 font-bold py-3 rounded-xl uppercase text-xs shadow-md mt-4 hover:bg-amber-600 transition">✏️ Editar mis datos</button>
+                            <button onclick="cerrarSesion()" class="w-full mt-4 text-red-500 text-xs font-bold uppercase hover:underline flex items-center justify-center gap-2"><i class="fa fa-sign-out-alt"></i> Cerrar Sesión</button>
+                        </div>
+
+                        <div id="profile-edit" class="hidden">
+                            <form id="edit-profile-form" onsubmit="actualizarPerfil(event)" class="space-y-3">
+                                <div><label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Nombre completo</label><input type="text" id="edit-nombre" required class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"></div>
+                                <div><label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Teléfono</label><input type="tel" id="edit-telefono" required class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"></div>
+                                <div class="flex gap-2">
+                                    <div class="w-2/3"><label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Calle</label><input type="text" id="edit-calle" required class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"></div>
+                                    <div class="w-1/3"><label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Número</label><input type="text" id="edit-numero" required class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"></div>
+                                </div>
+                                <div><label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Región</label><select id="edit-region" onchange="actualizarComunas('edit')" required class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"><option value="">Seleccione...</option></select></div>
+                                <div><label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Comuna</label><select id="edit-comuna" required class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"><option value="">Seleccione...</option></select></div>
+                                <div><label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Referencia</label><input type="text" id="edit-referencia" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"></div>
+                                
+                                <div class="flex gap-3 mt-4 pt-2 border-t">
+                                    <button type="submit" id="btn-update-profile" class="flex-1 bg-black text-white py-3 rounded-xl font-bold uppercase text-xs shadow-md hover:bg-gray-800 transition">Guardar</button>
+                                    <button type="button" onclick="cancelEditProfile()" class="flex-1 border border-gray-300 py-3 rounded-xl font-bold uppercase text-xs hover:bg-gray-100 transition">Cancelar</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div id="user-pedidos-view" class="hidden">
+                        <div id="lista-mis-pedidos" class="space-y-4">
+                            <p class="text-center text-sm text-gray-400 mt-6">Cargando tus pedidos...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="auth-recover-view" class="hidden">
+                    <h2 class="text-2xl font-black text-gray-900 mb-2 tracking-tight">Recuperar contraseña</h2>
+                    <p class="text-sm text-gray-600 mb-6">Te enviaremos un enlace para restablecer tu contraseña al correo electrónico.</p>
+                    <form id="recover-form" onsubmit="enviarRecuperacion(event)" class="space-y-4">
+                        <input type="email" id="recover-email" placeholder="Correo electrónico" required class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-beige outline-none transition text-sm">
+                        <button type="submit" id="btn-recover-submit" class="w-full bg-beige text-gray-900 py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-amber-600 transition shadow-lg mt-2 text-sm">Enviar enlace</button>
+                    </form>
+                    <p class="text-center text-sm text-gray-500 mt-6">
+                        <span onclick="volverALogin()" class="text-beige font-black hover:underline cursor-pointer">Volver a inicio de sesión</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <aside id="left-sidebar" class="fixed inset-y-0 left-0 w-[280px] menu-bg-color border-r border-gray-100 z-[150] pt-24 transform -translate-x-full lg:translate-x-0 shadow-2xl flex flex-col justify-between h-full">
+        <div class="p-6 overflow-y-auto">
+            <div class="flex justify-between items-center mb-8 lg:hidden">
+                <span class="font-bold text-gray-400 uppercase tracking-widest text-xs">Navegación</span>
+                <button onclick="handleBackAction()" class="text-2xl text-gray-500">✕</button>
+            </div>
+            <button onclick="openAuthModal(); toggleMobileMenu();" class="w-full text-left px-5 py-4 rounded-xl bg-black text-white font-bold flex items-center gap-3 transition-all mb-6 lg:hidden shadow-md">
+                <i class="fa fa-user-circle text-lg"></i> <span id="mobile-menu-user-txt">Mi Cuenta</span>
+            </button>
+
+            <div id="admin-menu-item" class="hidden mb-4">
+                <button onclick="openAdminModal()" class="w-full text-left px-5 py-4 rounded-xl bg-amber-100 text-amber-800 font-bold flex items-center gap-3 transition-all shadow-md hover:bg-amber-200">
+                    <i class="fa fa-cog"></i> Panel Administración
+                </button>
+            </div>
+
+            <nav class="space-y-2" id="nav-categorias"></nav>
+        </div>
+        <div class="p-8 border-t border-gray-100 bg-white/50">
+            <h4 class="text-xs font-black uppercase text-gray-400 mb-4 tracking-widest">Síguenos</h4>
+            <div class="flex gap-6 text-2xl text-gray-400">
+                <a href="#" target="_blank" class="hover:text-beige transition hover:-translate-y-1"><i class="fab fa-instagram"></i></a>
+                <a href="#" target="_blank" class="hover:text-beige transition hover:-translate-y-1"><i class="fab fa-tiktok"></i></a>
+                <a href="https://wa.me/56936416743" target="_blank" class="hover:text-beige transition hover:-translate-y-1"><i class="fab fa-whatsapp"></i></a>
+            </div>
+            <p class="text-[10px] text-gray-300 mt-4">© 2026 Tiococo</p>
+        </div>
+    </aside>
+
     <main id="main-content" class="pt-28 px-4 md:px-12 layout-desktop min-h-screen">
-        </main>
+        
+        <div class="lg:hidden sticky-search-container">
+            <div class="relative w-full">
+                <input type="text" id="search-mobile" onkeyup="buscar(this.value)" placeholder="Buscar producto..." class="w-full bg-gray-50 border border-transparent p-4 pl-12 rounded-2xl shadow-sm focus:ring-1 focus:ring-beige focus:bg-white transition">
+                <i class="fa fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-beige"></i>
+            </div>
+        </div>
+
+        <section id="hero-section" class="relative glass-panel text-gray-800 py-12 px-6 md:px-12 mb-12 rounded-[2rem] overflow-hidden shadow-lg fade-in-up hidden">
+            <div class="relative z-10 max-w-6xl mx-auto">
+                <div class="text-center mb-8">
+                    <span class="inline-block py-1.5 px-4 rounded-full bg-black text-white font-bold text-[10px] md:text-xs tracking-widest uppercase mb-4 shadow-sm">Menú Online</span>
+                    <h2 class="text-3xl md:text-5xl font-black mb-4 leading-tight text-gray-900 tracking-tight">
+                        Rápido, Rico y <span class="text-beige italic font-serif">A la puerta de tu casa.</span>
+                    </h2>
+                </div>
+                <div class="mt-8 border-t border-gray-200 pt-8">
+                    <h3 class="text-center font-bold text-gray-400 text-xs uppercase tracking-widest mb-6">🔥 Los más pedidos</h3>
+                    <div id="hero-destacados-container" class="mobile-slider destacados-grid-pc pb-2"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16 py-10 px-4 bg-white/95 border-2 border-gray-100 rounded-3xl shadow-md">
+            <h3 class="text-center font-black text-gray-900 text-sm uppercase tracking-widest mb-10 border-b pb-4 border-gray-200">
+                <i class="fa fa-motorcycle text-beige mr-2"></i> ¿Cómo pedir?
+            </h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div class="flex flex-col items-center group">
+                    <div class="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center text-xl mb-4 shadow-lg"><i class="fa fa-hamburger"></i></div>
+                    <span class="font-black text-gray-900 text-base">1. Elige</span>
+                    <p class="text-xs font-bold text-gray-500 mt-2 px-2 leading-tight">Arma tu carrito</p>
+                </div>
+                <div class="flex flex-col items-center group">
+                    <div class="w-14 h-14 bg-[#25D366] text-white rounded-2xl flex items-center justify-center text-xl mb-4 shadow-lg"><i class="fab fa-whatsapp"></i></div>
+                    <span class="font-black text-gray-900 text-base">2. Envía</span>
+                    <p class="text-xs font-bold text-gray-500 mt-2 px-2 leading-tight">Pide por WhatsApp</p>
+                </div>
+                <div class="flex flex-col items-center group">
+                    <div class="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center text-xl mb-4 shadow-lg"><i class="fa fa-money-bill-wave"></i></div>
+                    <span class="font-black text-gray-900 text-base">3. Paga</span>
+                    <p class="text-xs font-bold text-gray-500 mt-2 px-2 leading-tight">Transferencia o Efectivo</p>
+                </div>
+                <div class="flex flex-col items-center group">
+                    <div class="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center text-xl mb-4 shadow-lg"><i class="fa fa-home"></i></div>
+                    <span class="font-black text-gray-900 text-base">4. Disfruta</span>
+                    <p class="text-xs font-bold text-gray-500 mt-2 px-2 leading-tight">Recibe en tu puerta</p>
+                </div>
+            </div>
+        </section>
+
+        <div id="loading-msg" class="text-center py-20 glass-panel rounded-2xl mb-10">
+            <i class="fa fa-circle-notch fa-spin text-4xl text-beige mb-4"></i>
+            <p class="text-gray-900 font-bold">Cargando menú...</p>
+        </div>
+
+        <section id="seccion-catalogo" class="hidden mb-12">
+            <div class="glass-panel p-6 rounded-2xl mb-6 flex items-center justify-between shadow-sm">
+                <h2 id="titulo-grid" class="text-xl font-black text-gray-900 uppercase tracking-widest">Catálogo</h2>
+                <span id="cantidad-productos" class="text-xs font-bold text-white bg-black px-3 py-1.5 rounded-lg">0</span>
+            </div>
+            
+            <div id="grid-productos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8 mb-8"></div>
+            
+            <div id="pagination-controls" class="flex justify-center items-center gap-4 py-6 hidden">
+                <button onclick="changePage(-1)" id="btn-prev" class="bg-white px-4 py-2 rounded-full shadow font-bold text-sm border">Anterior</button>
+                <span id="page-indicator" class="font-bold text-gray-900 bg-white px-4 py-2 rounded-full shadow border">Pág 1</span>
+                <button onclick="changePage(1)" id="btn-next" class="bg-black text-white px-6 py-2 rounded-full shadow font-bold text-sm disabled:opacity-50">Siguiente</button>
+            </div>
+        </section>
+
+        <footer class="max-w-6xl mx-auto mt-20 border-t border-gray-200 pt-10 pb-6 text-xs text-gray-500">
+            <div class="text-center">
+                <h4 class="font-bold text-gray-700 mb-2 uppercase tracking-wider">Tiococo Comida Rápida</h4>
+                <p class="mb-2">La mejor comida, directo a tu mesa.</p>
+                <p>© 2026 Tiococo - Todos los derechos reservados.</p>
+            </div>
+        </footer>
+    </main>
 
     <aside id="cart-sidebar" class="fixed inset-y-0 right-0 w-full md:w-[420px] bg-white z-[160] shadow-2xl transform translate-x-full flex flex-col h-full">
         <div class="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 flex-shrink-0">
@@ -36,6 +280,22 @@
         <div id="cart-items" class="flex-1 overflow-y-auto p-6 space-y-6"></div>
         
         <div class="p-5 bg-white border-t border-gray-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] flex-shrink-0">
+            <div class="mb-4 flex flex-col gap-3">
+                <div>
+                    <h4 class="font-bold text-[10px] uppercase text-gray-400 mb-2 tracking-wider">Documento Tributario</h4>
+                    <div class="flex gap-2">
+                        <label class="flex-1 flex items-center justify-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:border-beige transition bg-white has-[:checked]:border-beige has-[:checked]:bg-orange-50/30">
+                            <input type="radio" name="tipo_doc" value="Boleta" checked class="accent-beige w-3 h-3">
+                            <span class="font-bold text-gray-700 text-xs">Boleta</span>
+                        </label>
+                        <label class="flex-1 flex items-center justify-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:border-beige transition bg-white has-[:checked]:border-beige has-[:checked]:bg-orange-50/30">
+                            <input type="radio" name="tipo_doc" value="Factura" class="accent-beige w-3 h-3">
+                            <span class="font-bold text-gray-700 text-xs">Factura</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <div class="bg-gray-50 p-3 rounded-lg border border-gray-100 mb-4">
                 <div class="flex justify-between text-xs text-gray-600 mb-1">
                     <span>Subtotal:</span>
@@ -57,6 +317,103 @@
             </button>
         </div>
     </aside>
+
+    <div id="mobile-sticky-bar" onclick="toggleCart()" class="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-200 p-4 z-[60] shadow-lg flex justify-between items-center lg:hidden hidden fade-in-up cursor-pointer">
+        <div class="flex flex-col pointer-events-none">
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total Productos</span>
+            <span id="mobile-total-sticky" class="text-xl font-black text-gray-900">$0</span>
+        </div>
+        <button class="bg-black text-white px-6 py-3 rounded-xl font-bold text-sm shadow-xl">Ver Pedido <i class="fa fa-shopping-cart"></i></button>
+    </div>
+
+    <button id="desktop-floating-cart" onclick="toggleCart()" class="hidden lg:flex fixed bottom-8 right-8 bg-black text-white px-6 py-3 rounded-full font-bold shadow-2xl z-[55] hover:scale-105 transition-transform items-center gap-3 border-2 border-white hover:bg-beige">
+        <i class="fa fa-shopping-bag"></i>
+        <span id="desktop-floating-total">$0</span>
+    </button>
+
+    <div id="product-modal" onclick="if(event.target === this) closeProductModal()" class="fixed inset-0 z-[200] bg-black bg-opacity-50 hidden items-center justify-center p-4">
+        <div class="bg-white product-modal-desktop w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl shadow-2xl relative h-full">
+            <button onclick="closeProductModal()" class="absolute top-4 right-4 z-50 bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg text-lg hover:bg-red-100 hover:text-red-500 transition">✕</button>
+            <div id="modal-content" class="flex-1 flex flex-col overflow-hidden relative h-full"></div>
+        </div>
+    </div>
+
+    <div id="order-detail-modal" class="fixed inset-0 z-[300] bg-white hidden flex-col modal-full-screen overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+            <h3 class="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight">Detalle de tu Pedido</h3>
+            <button onclick="cerrarDetallePedido()" class="text-gray-400 hover:text-black w-10 h-10 rounded-full hover:bg-gray-200 flex items-center justify-center transition text-2xl">&times;</button>
+        </div>
+        <div class="flex-1 overflow-y-auto bg-gray-100">
+            <div id="order-detail-content" class="max-w-4xl mx-auto p-4 md:p-8"></div>
+        </div>
+    </div>
+
+    <div id="payment-loader-modal" class="fixed inset-0 z-[300] bg-white hidden flex-col items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+        <div class="text-center max-w-sm w-full">
+            <div class="relative w-24 h-24 mx-auto mb-8">
+                <i class="fab fa-whatsapp text-6xl text-[#25D366] animate-pulse"></i>
+            </div>
+            <h2 class="text-2xl font-black text-gray-900 mb-2">Preparando Pedido</h2>
+            <p class="text-gray-500 font-medium mb-6">Estamos generando el resumen para enviarlo por WhatsApp...</p>
+        </div>
+    </div>
+
+    <div id="admin-modal" class="fixed inset-0 z-[250] bg-black bg-opacity-50 hidden items-center justify-center p-0">
+        <div class="bg-white admin-modal-full flex flex-col overflow-hidden w-full h-full">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50">
+                <h2 class="text-2xl font-black text-gray-900">Panel de Administración</h2>
+                <button onclick="closeAdminModal()" class="text-gray-500 hover:text-black text-2xl w-10 h-10 rounded-full hover:bg-gray-200 flex items-center justify-center transition">✕</button>
+            </div>
+            
+            <div class="flex border-b border-gray-200 px-6 pt-4">
+                <button id="tab-productos" class="py-2 px-4 font-bold text-sm uppercase border-b-2 border-beige text-beige" onclick="switchAdminTab('productos')">Productos</button>
+                <button id="tab-nuevo" class="py-2 px-4 font-bold text-sm uppercase text-gray-500 hover:text-gray-700" onclick="switchAdminTab('nuevo')">+ Nuevo Producto</button>
+                <button id="tab-pedidos" class="py-2 px-4 font-bold text-sm uppercase text-gray-500 hover:text-gray-700" onclick="switchAdminTab('pedidos')">🚚 Pedidos</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6">
+                <div id="admin-productos-view" class="block max-w-5xl mx-auto">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                        <h3 class="font-bold text-lg">Menú Actual</h3>
+                        <div class="relative w-full md:w-1/2">
+                            <input type="text" id="admin-search-input" onkeyup="filtrarAdmin(this.value)" placeholder="Buscar producto..." class="w-full p-3 pl-10 bg-white border border-gray-300 rounded-xl text-sm focus:ring-1 focus:ring-beige outline-none">
+                            <i class="fa fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                    </div>
+                    <div id="admin-productos-list" class="space-y-3"></div>
+                </div>
+
+                <div id="admin-nuevo-view" class="hidden max-w-2xl mx-auto">
+                    <h3 class="font-bold text-lg mb-4" id="form-titulo">Agregar Nuevo Producto</h3>
+                    <form id="producto-form" onsubmit="guardarProducto(event)" class="space-y-4">
+                        <input type="hidden" id="producto-id" value="">
+                        <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Nombre del producto</label><input type="text" id="producto-nombre" required class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"></div>
+                        <div class="flex gap-4">
+                            <div class="flex-1"><label class="text-xs font-bold text-gray-500 uppercase ml-1">SKU / Código</label><input type="text" id="producto-sku" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"></div>
+                            <div class="flex-1"><label class="text-xs font-bold text-gray-500 uppercase ml-1">Precio ($)</label><input type="number" id="producto-precio" min="0" step="1" required class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"></div>
+                        </div>
+                        <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Descripción</label><textarea id="producto-desc" rows="3" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"></textarea></div>
+                        
+                        <div class="flex gap-3 pt-4 border-t border-gray-200 mt-4">
+                            <button type="submit" id="btn-guardar-producto" class="bg-beige text-gray-900 py-3 px-8 rounded-xl font-bold uppercase text-sm shadow-md hover:bg-amber-600 transition">Crear Producto</button>
+                            <button type="button" onclick="cancelarEdicion()" class="border border-gray-300 py-3 px-8 rounded-xl font-bold uppercase text-sm hover:bg-gray-100 transition">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="admin-pedidos-view" class="hidden max-w-5xl mx-auto">
+                    <h3 class="font-bold text-lg mb-6 border-b pb-2">Gestión de Pedidos</h3>
+                    <div id="admin-lista-pedidos" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-modal" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-[200] hidden transition-all w-11/12 max-w-sm toast-enter">
+        <div class="bg-gray-900 text-white rounded-2xl p-4 shadow-2xl flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3" id="toast-content"></div>
+        </div>
+    </div>
 
     <script src="js/main.js"></script>
 </body>
