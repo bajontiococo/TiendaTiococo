@@ -1,8 +1,11 @@
 // =========================================================================
 // CONFIGURACIÓN TIOCOCO
 // =========================================================================
-const WHATSAPP_NUM = "56936416743"; // Tu número de WhatsApp
 
+// Número al que llegarán los pedidos (sin el +)
+const WHATSAPP_NUM = "56936416743"; 
+
+// Función de seguridad: Evita que alguien inyecte código malicioso en los textos (XSS)
 function escapeHTML(str) {
     return String(str).replace(/[&<>"]/g, function(m) {
         if (m === '&') return '&amp;';
@@ -13,44 +16,48 @@ function escapeHTML(str) {
     });
 }
 
-// ⚠️ datos cuenta supabase ⚠️
+// ⚠️ CONEXIÓN A SUPABASE ⚠️
 const supabaseUrl = 'https://uitfwvhvhqiwltxdxjeh.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpdGZ3dmh2aHFpd2x0eGR4amVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMTAzODEsImV4cCI6MjA4ODU4NjM4MX0.hhO9VjOWixggdvApkNeivCCeLekJgsY86qcbPZFW2e0';
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-//solo la region Rm posible expanción a futuro.
+// =========================================================================
+// VARIABLES GLOBALES Y DATOS
+// =========================================================================
+
+// Regiones y comunas para el formulario de despacho. Solo RM por ahora.
 const regionesYComunas = {
     "Metropolitana": ["Santiago", "Cerrillos", "Cerro Navia", "Conchalí", "El Bosque", "Estación Central", "Huechuraba", "Independencia", "La Cisterna", "La Florida", "La Granja", "La Pintana", "La Reina", "Las Condes", "Lo Barnechea", "Lo Espejo", "Lo Prado", "Macul", "Maipú", "Ñuñoa", "Pedro Aguirre Cerda", "Peñalolén", "Providencia", "Pudahuel", "Quilicura", "Quinta Normal", "Recoleta", "Renca", "San Joaquín", "San Miguel", "San Ramón", "Vitacura", "Puente Alto", "Pirque", "San José de Maipo", "Colina", "Lampa", "Tiltil", "San Bernardo", "Buin", "Calera de Tango", "Paine", "Melipilla", "Alhué", "Curacaví", "María Pinto", "San Pedro", "Talagante", "El Monte", "Isla de Maipo", "Padre Hurtado", "Peñaflor"],
-
 };
 
-const comunasRM = {
-    centricas: ["Santiago", "Providencia", "Las Condes", "Ñuñoa", "La Reina", "Vitacura", "Lo Barnechea", "Macul", "San Joaquín", "Pedro Aguirre Cerda", "San Miguel", "Estación Central", "Quinta Normal", "Recoleta", "Independencia", "Conchalí", "Renca", "Cerro Navia", "Lo Prado", "Pudahuel", "Cerrillos", "Maipú", "La Florida", "Peñalolén", "La Granja", "La Cisterna", "El Bosque", "San Ramón", "La Pintana", "Puente Alto", "San Bernardo"],
-    perifericas: ["Colina", "Lampa", "Tiltil", "Pirque", "San José de Maipo", "Buin", "Calera de Tango", "Paine", "Melipilla", "Alhué", "Curacaví", "María Pinto", "San Pedro", "Talagante", "El Monte", "Isla de Maipo", "Padre Hurtado", "Peñaflor"]
-};
+// Variables para el funcionamiento de la tienda
+let db = []; // Aquí se guardan los productos que se muestran al cliente
+let adminDb = []; // Aquí se guardan los productos para el panel de admin
+let cart = JSON.parse(localStorage.getItem('tiococo_cart')) || []; // Carrito de compras (se lee del navegador)
+let currentPage = 1; // Página actual del catálogo
+const itemsPerPage = 20; // Cuántos productos mostrar por página
+let totalProductos = 0; // Total de productos en la base de datos
+let busquedaActual = ''; // Lo que el usuario escribió en el buscador
+let lastSearch = ''; // Para no buscar dos veces lo mismo
 
-let db = []; 
-let adminDb = []; 
-let cart = JSON.parse(localStorage.getItem('tiococo_cart')) || [];
-let currentPage = 1;
-const itemsPerPage = 20;
-let totalProductos = 0; 
-let busquedaActual = '';
-let lastSearch = '';
+let hasOpenedCartAutomatically = false; // Controla si ya le abrimos el carrito automáticamente al cliente
+let searchTimeout; // Temporizador para el buscador
+let costoEnvio = 3500; // Costo de envío por defecto
+let totalPagarFinal = 0; // Suma del carrito + envío
 
-let hasOpenedCartAutomatically = false; 
-let searchTimeout; 
-let costoEnvio = 3500; 
-let totalPagarFinal = 0;
+let currentUser = null; // Usuario logueado
+let userProfile = null; // Datos del perfil del usuario (nombre, dirección, rol)
+let productoEnEdicion = null; // ID del producto que se está editando en el admin
+let filtroAdminTexto = ''; // Texto del buscador del panel admin
 
-let currentUser = null;
-let userProfile = null;
-let productoEnEdicion = null;
-
-let filtroAdminTexto = '';
-
+// Imagen por defecto por si un producto no tiene foto o falla al cargar
 const PLACEHOLDER_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='14' text-anchor='middle' dy='.3em' fill='%23999'%3ESin Foto%3C/text%3E%3C/svg%3E";
 
+// =========================================================================
+// INICIALIZACIÓN (CUANDO LA PÁGINA CARGA)
+// =========================================================================
+
+// Controla el botón "Atrás" del celular para cerrar modales en vez de salir de la página
 window.addEventListener('popstate', function(event) {
     const modal = document.getElementById('product-modal');
     const authModal = document.getElementById('auth-modal');
@@ -71,14 +78,20 @@ window.addEventListener('popstate', function(event) {
     }
 });
 
+// Lo primero que ejecuta la página al terminar de cargar el HTML
 window.addEventListener('DOMContentLoaded', () => { 
-    verificarSesion();
-    cargarProductosPagina(1); 
-    updateCartUI();
-    initSwipeGestures();
-    cargarSelectoresRegion(); 
+    verificarSesion(); // Revisa si hay alguien logueado
+    cargarProductosPagina(1); // Carga la primera página del menú
+    updateCartUI(); // Dibuja el carrito si había algo guardado
+    initSwipeGestures(); // Activa el deslizar con el dedo en celulares
+    cargarSelectoresRegion(); // Llena los <select> de regiones
 });
 
+// =========================================================================
+// FORMULARIOS DE DIRECCIÓN Y ENVÍO
+// =========================================================================
+
+// Llena los selectores de región en el registro y en editar perfil
 function cargarSelectoresRegion() {
     const selectReg = document.getElementById('reg-region');
     const selectEdit = document.getElementById('edit-region');
@@ -92,9 +105,12 @@ function cargarSelectoresRegion() {
     if(selectEdit) selectEdit.innerHTML = opciones;
 }
 
+// Al elegir una región, llena el selector de comunas correspondiente
 function actualizarComunas(prefijo) {
     const selectRegion = document.getElementById(`${prefijo}-region`);
     const selectComuna = document.getElementById(`${prefijo}-comuna`);
+    if(!selectRegion || !selectComuna) return;
+
     const regionElegida = selectRegion.value;
 
     if (regionElegida && regionesYComunas[regionElegida]) {
@@ -108,9 +124,14 @@ function actualizarComunas(prefijo) {
         selectComuna.innerHTML = '<option value="">Primero seleccione Región</option>';
         selectComuna.disabled = true;
     }
-    actualizarOpcionEnvioSegunDireccion();
+    actualizarOpcionEnvioSegunDireccion(); // Recalcula si el envío sube o baja de precio
 }
 
+// =========================================================================
+// CATÁLOGO Y BUSCADOR
+// =========================================================================
+
+// Trae los productos de Supabase por "páginas" (de 20 en 20)
 async function cargarProductosPagina(page) {
     const loadingMsg = document.getElementById('loading-msg');
     const seccionCatalogo = document.getElementById('seccion-catalogo');
@@ -124,10 +145,12 @@ async function cargarProductosPagina(page) {
     try {
         let query = supabaseClient.from('productos').select('*', { count: 'exact' });
 
+        // Si escribieron algo en el buscador, filtra
         if (busquedaActual.length > 0) {
             query = query.or(`producto.ilike.%${busquedaActual}%,numero_producto.ilike.%${busquedaActual}%`);
             query = query.order('id', { ascending: false });
         } else {
+            // Si no, ordena los destacados primero
             query = query.order('destacado', { ascending: false }); 
         }
 
@@ -138,7 +161,7 @@ async function cargarProductosPagina(page) {
 
         totalProductos = count || 0;
 
-        // Simplificación: Asignamos valores por defecto a lo que ya no está en la base de datos
+        // Limpiamos los datos que vienen de la BD y rellenamos lo que falta por la simplificación
         db = data.map(p => ({
             id: p.id,
             sku: p.numero_producto || 'S/N',
@@ -146,15 +169,15 @@ async function cargarProductosPagina(page) {
             desc: p.descripcion || 'Sin descripción',
             precio: Number(p.precio) || 0,
             destacado: p.destacado || 0,
+            img: p.foto || PLACEHOLDER_SVG, // AQUÍ RECUPERAMOS LA IMAGEN REAL
             cat: 'General', 
-            img: PLACEHOLDER_SVG,
             disponible: true, 
             stock: 9999 
         }));
 
-        renderGrid(db, page);
-        renderPaginationControls(page); 
-        renderDestacados(db);
+        renderGrid(db, page); // Dibuja las cartas
+        renderPaginationControls(page); // Dibuja los botones "Siguiente / Anterior"
+        renderDestacados(db); // Dibuja el carrusel de arriba
 
         if (loadingMsg) loadingMsg.classList.add('hidden');
         if (seccionCatalogo) seccionCatalogo.classList.remove('hidden');
@@ -165,6 +188,7 @@ async function cargarProductosPagina(page) {
     }
 }
 
+// Dibuja la cuadrícula de productos en la pantalla
 function renderGrid(lista, page) {
     const contenedor = document.getElementById('grid-productos');
     const cantidad = document.getElementById('cantidad-productos');
@@ -181,6 +205,7 @@ function renderGrid(lista, page) {
     contenedor.innerHTML = lista.map(p => cardHTML(p)).join(''); 
 }
 
+// Dibuja los botones de paginación
 function renderPaginationControls(page) {
     const controls = document.getElementById('pagination-controls');
     if(!controls) return;
@@ -195,6 +220,7 @@ function renderPaginationControls(page) {
     document.getElementById('btn-next').disabled = page === totalPages;
 }
 
+// Cambia de página al presionar los botones
 function changePage(direction) {
     const newPage = currentPage + direction;
     if (newPage >= 1 && newPage <= Math.ceil(totalProductos / itemsPerPage)) {
@@ -202,6 +228,7 @@ function changePage(direction) {
         cargarProductosPagina(currentPage);
         const catalogo = document.getElementById('seccion-catalogo');
         if (catalogo) {
+            // Sube la pantalla hasta donde empieza el catálogo
             window.scrollTo({
                 top: catalogo.getBoundingClientRect().top + window.pageYOffset - 120, 
                 behavior: 'smooth'
@@ -210,6 +237,7 @@ function changePage(direction) {
     }
 }
 
+// Botón del logo para limpiar todo y volver al inicio
 function resetAndScrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     busquedaActual = '';
@@ -227,11 +255,13 @@ function resetAndScrollToTop() {
     mostrarToast("Volviendo al inicio", "info");
 }
 
+// Función que se activa cada vez que el usuario teclea en el buscador
 function buscar(query) {
     if (query === lastSearch) return;
     lastSearch = query;
     clearTimeout(searchTimeout); 
     
+    // Espera medio segundo sin teclear antes de buscar en la BD (para no saturarla)
     searchTimeout = setTimeout(() => {
         busquedaActual = query.toLowerCase();
         currentPage = 1;
@@ -247,6 +277,7 @@ function buscar(query) {
     }, 500);
 }
 
+// Dibuja el carrusel superior con los productos que tienen destacado = 1
 function renderDestacados(lista) {
     const destacados = lista.filter(p => p.destacado === 1).slice(0, 6); 
     const container = document.getElementById('hero-destacados-container');
@@ -260,8 +291,8 @@ function renderDestacados(lista) {
     section.classList.remove('hidden'); 
     container.innerHTML = destacados.map(p => `
         <div class="slider-card bg-white rounded-2xl border border-gray-200 overflow-hidden relative h-full flex flex-col shadow-sm cursor-pointer hover:shadow-md transition-all" onclick="openProduct(${p.id})">
-            <div class="relative h-48 md:h-56 bg-gray-100 p-2 flex items-center justify-center">
-                <i class="fa fa-hamburger text-6xl text-gray-300"></i>
+            <div class="relative h-48 md:h-56 bg-white p-2 flex items-center justify-center">
+                <img src="${escapeHTML(p.img)}" class="w-full h-full object-contain" alt="${escapeHTML(p.nombre)}" loading="lazy" onerror="this.onerror=null; this.src='${PLACEHOLDER_SVG}'; this.classList.add('img-placeholder')">
                 <div class="absolute top-2 left-2 bg-black text-white px-2 py-1 rounded text-[10px] font-bold uppercase shadow-sm">Destacado</div>
             </div>
             <div class="p-3 flex flex-col flex-1">
@@ -272,7 +303,11 @@ function renderDestacados(lista) {
     `).join('');
 }
 
-// --- SISTEMA DE USUARIOS Y PERFILES ---
+// =========================================================================
+// SISTEMA DE USUARIOS (LOGIN Y PERFIL)
+// =========================================================================
+
+// Verifica silenciosamente si el usuario tiene una sesión activa al cargar la página
 async function verificarSesion() {
     const { data: { user }, error } = await supabaseClient.auth.getUser();
     
@@ -286,6 +321,7 @@ async function verificarSesion() {
     }
     actualizarBotonesUsuario();
     
+    // Escucha cambios: si el usuario inicia sesión o la cierra en otra pestaña
     supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (session && session.user) {
             if (!currentUser || currentUser.id !== session.user.id) {
@@ -304,6 +340,7 @@ async function verificarSesion() {
     });
 }
 
+// Descarga los datos personales del usuario desde la tabla profiles
 async function cargarPerfil(userId) {
     const { data, error } = await supabaseClient
         .from('profiles')
@@ -313,7 +350,7 @@ async function cargarPerfil(userId) {
     
     if (!error && data) { 
         userProfile = data; 
-        userProfile.esAdmin = (data.rol === 'admin');
+        userProfile.esAdmin = (data.rol === 'admin'); // Otorga permisos de admin
         actualizarOpcionEnvioSegunDireccion();
     } else {
         userProfile = null;
@@ -321,6 +358,7 @@ async function cargarPerfil(userId) {
     return userProfile;
 }
 
+// Cambia el ícono del header dependiendo de si está logueado o no
 function actualizarBotonesUsuario() {
     const icon = document.getElementById('user-icon');
     const mobileTxt = document.getElementById('mobile-menu-user-txt');
@@ -331,6 +369,7 @@ function actualizarBotonesUsuario() {
         icon.classList.replace('text-gray-400', 'text-beige');
         if(mobileTxt) mobileTxt.innerText = "Mi Perfil";
         
+        // Si es admin, muestra el botón de administración
         if (userProfile?.esAdmin) {
             if(adminMenuItem) adminMenuItem.classList.remove('hidden');
         } else {
@@ -344,6 +383,7 @@ function actualizarBotonesUsuario() {
     }
 }
 
+// Abre el modal flotante de Mi Cuenta
 function openAuthModal() {
     history.pushState({modal: 'auth'}, null, "");
     const modal = document.getElementById('auth-modal');
@@ -352,6 +392,7 @@ function openAuthModal() {
     modal.classList.add('flex');
     document.body.classList.add('locked');
     
+    // Si ya está logueado, abre su perfil. Si no, abre el login.
     if (currentUser && userProfile) {
         const loginView = document.getElementById('auth-login-view');
         const regView = document.getElementById('auth-register-view');
@@ -365,6 +406,7 @@ function openAuthModal() {
         
         const dirCompleta = `${userProfile.calle || ''} ${userProfile.numero_casa || ''}, ${userProfile.comuna || ''}, ${userProfile.region || ''}`;
         
+        // Rellenar textos
         const dNombre = document.getElementById('display-nombre');
         const dTel = document.getElementById('display-telefono');
         const dDir = document.getElementById('display-direccion');
@@ -375,6 +417,7 @@ function openAuthModal() {
         if(dDir) dDir.innerText = dirCompleta.trim().length > 3 ? dirCompleta : (userProfile.direccion_defecto || '-');
         if(dRef) dRef.innerText = escapeHTML(userProfile.referencia || '-');
         
+        // Rellenar inputs de edición
         const eNombre = document.getElementById('edit-nombre');
         const eTel = document.getElementById('edit-telefono');
         const eCalle = document.getElementById('edit-calle');
@@ -407,6 +450,7 @@ function openAuthModal() {
     }
 }
 
+// Cierra el modal de cuenta
 function closeAuthModal() {
     const modal = document.getElementById('auth-modal');
     if(!modal) return;
@@ -416,6 +460,7 @@ function closeAuthModal() {
     if(history.state && history.state.modal === 'auth') history.back();
 }
 
+// Alterna entre la pantalla de iniciar sesión y la de crear cuenta
 function toggleAuthView() {
     const login = document.getElementById('auth-login-view');
     const reg = document.getElementById('auth-register-view');
@@ -431,6 +476,7 @@ function toggleAuthView() {
     if(recoverView) recoverView.classList.add('hidden');
 }
 
+// Muestra la vista de recuperar contraseña
 function mostrarRecuperarPass() {
     const loginView = document.getElementById('auth-login-view');
     const regView = document.getElementById('auth-register-view');
@@ -442,6 +488,7 @@ function mostrarRecuperarPass() {
     if(recoverView) recoverView.classList.remove('hidden');
 }
 
+// Vuelve al login desde recuperar contraseña
 function volverALogin() {
     const recoverView = document.getElementById('auth-recover-view');
     const loginView = document.getElementById('auth-login-view');
@@ -449,6 +496,7 @@ function volverALogin() {
     if(loginView) loginView.classList.remove('hidden');
 }
 
+// Manda el correo para resetear la clave
 async function enviarRecuperacion(e) {
     e.preventDefault();
     const email = document.getElementById('recover-email').value;
@@ -470,6 +518,7 @@ async function enviarRecuperacion(e) {
     btn.disabled = false;
 }
 
+// Alterna las pestañas "Mis Datos" y "Mis Pedidos" dentro del perfil
 function switchUserTab(tab) {
     const btnPerfil = document.getElementById('tab-mi-perfil');
     const btnPedidos = document.getElementById('tab-mis-pedidos');
@@ -498,6 +547,11 @@ function switchUserTab(tab) {
     }
 }
 
+// =========================================================================
+// HISTORIAL DE PEDIDOS DEL CLIENTE
+// =========================================================================
+
+// Carga las compras anteriores del cliente logueado
 async function cargarMisPedidos() {
     const contenedor = document.getElementById('lista-mis-pedidos');
     if(!contenedor) return;
@@ -549,6 +603,7 @@ async function cargarMisPedidos() {
     }
 }
 
+// Abre una vista a pantalla completa con el detalle exacto de una orden antigua
 async function verDetallePedido(orderId) {
     const modalContent = document.getElementById('order-detail-content');
     const orderModal = document.getElementById('order-detail-modal');
@@ -568,10 +623,10 @@ async function verDetallePedido(orderId) {
 
         if (pedidoError) throw pedidoError;
 
-        // Buscamos los items y traemos el nombre desde la tabla productos
+        // Buscamos los items y traemos nombre/foto desde la tabla productos
         const { data: items, error: itemsError } = await supabaseClient
             .from('order_items')
-            .select('*, productos:product_id ( producto )')
+            .select('*, productos:product_id ( producto, foto )')
             .eq('order_id', orderId);
 
         if (itemsError) throw itemsError;
@@ -593,11 +648,11 @@ async function verDetallePedido(orderId) {
         items.forEach(item => {
             const subtotalItem = item.cantidad * item.precio_historico;
             subtotal += subtotalItem;
-            // Al simplificar, omitimos la foto real y usamos el SVG o un icono
+            // Mostramos la imagen guardada de cuando se compró
             itemsHTML += `
                 <div class="flex gap-4 py-4 border-b border-gray-100 items-center">
-                    <div class="w-16 h-16 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center shrink-0">
-                        <i class="fa fa-hamburger text-2xl text-gray-300"></i>
+                    <div class="w-16 h-16 bg-white border border-gray-200 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                        <img src="${escapeHTML(item.productos?.foto || PLACEHOLDER_SVG)}" class="w-full h-full object-cover">
                     </div>
                     <div class="flex-1">
                         <p class="font-bold text-sm text-gray-800 leading-tight">${escapeHTML(item.productos?.producto || 'Producto')}</p>
@@ -658,6 +713,7 @@ async function verDetallePedido(orderId) {
     }
 }
 
+// Cierra la vista del pedido
 function cerrarDetallePedido() {
     const modal = document.getElementById('order-detail-modal');
     if(modal) {
@@ -667,6 +723,11 @@ function cerrarDetallePedido() {
     document.body.classList.remove('locked');
 }
 
+// =========================================================================
+// REGISTRO Y MODIFICACIÓN DE DATOS (AUTH)
+// =========================================================================
+
+// Crea una cuenta nueva en Supabase Auth y guarda los datos en la tabla profiles
 async function registrarUsuario(e) {
     e.preventDefault();
     const email = document.getElementById('reg-email').value;
@@ -716,6 +777,7 @@ async function registrarUsuario(e) {
     }
 }
 
+// Inicia sesión
 async function iniciarSesion(e) {
     e.preventDefault();
     const btn = document.getElementById('btn-login-submit');
@@ -723,6 +785,7 @@ async function iniciarSesion(e) {
     btn.disabled = true;
     const email = document.getElementById('login-email').value;
     const pass = document.getElementById('login-pass').value;
+    
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
     if (error) { 
         mostrarToast("Correo o contraseña incorrectos", "error"); 
@@ -736,6 +799,7 @@ async function iniciarSesion(e) {
     btn.disabled = false;
 }
 
+// Oculta datos fijos y muestra inputs para editar
 function showEditProfile() {
     const readonly = document.getElementById('profile-readonly');
     const edit = document.getElementById('profile-edit');
@@ -743,6 +807,7 @@ function showEditProfile() {
     if(edit) edit.classList.remove('hidden');
 }
 
+// Oculta inputs y vuelve a mostrar datos fijos
 function cancelEditProfile() {
     const readonly = document.getElementById('profile-readonly');
     const edit = document.getElementById('profile-edit');
@@ -750,6 +815,7 @@ function cancelEditProfile() {
     if(edit) edit.classList.add('hidden');
 }
 
+// Guarda los cambios del perfil en la BD
 async function actualizarPerfil(e) {
     e.preventDefault();
     const btn = document.getElementById('btn-update-profile');
@@ -785,6 +851,7 @@ async function actualizarPerfil(e) {
     btn.disabled = false;
 }
 
+// Cierra la sesión, limpia carrito y resetea variables
 async function cerrarSesion() {
     await supabaseClient.auth.signOut();
     currentUser = null;
@@ -810,12 +877,14 @@ async function cerrarSesion() {
     closeAuthModal();
 }
 
+// Evalúa si una dirección corresponde a Santiago para aplicar envío fijo
 function esRegionMetropolitana(direccionOrRegion) {
     if (!direccionOrRegion) return false;
     const lower = direccionOrRegion.toLowerCase();
     return lower.includes('metropolitana') || lower.includes('rm') || lower.includes('santiago');
 }
 
+// Actualiza el texto de envío en el carrito según la dirección seleccionada
 function actualizarOpcionEnvioSegunDireccion() {
     let esRM = false;
     let comunaSeleccionada = '';
@@ -850,7 +919,7 @@ function actualizarOpcionEnvioSegunDireccion() {
                 envioMontoEl.innerText = `+$${costoEnvio.toLocaleString()}`;
             } else {
                 envioLabelEl.innerText = "Envío a Regiones:";
-                envioMontoEl.innerText = "Por Pagar (Starken)";
+                envioMontoEl.innerText = "Por Pagar";
             }
         } else {
             envioLabelEl.innerText = "Costo de envío:";
@@ -860,7 +929,11 @@ function actualizarOpcionEnvioSegunDireccion() {
     calcularTotal();
 }
 
-// --- CARRITO ---
+// =========================================================================
+// LÓGICA DEL CARRITO
+// =========================================================================
+
+// Suma un producto al carrito
 async function addToCart(id) {
     const p = db.find(x => x.id === id);
     if (!p) { mostrarToast("Producto no encontrado", "error"); return; }
@@ -869,6 +942,7 @@ async function addToCart(id) {
     if (item) item.qty++;
     else cart.push({ ...p, qty: 1 });
     
+    // Si está logueado, lo guarda en la BD. Si no, en LocalStorage.
     if (currentUser) {
         await syncCartToDB();
     } else {
@@ -895,6 +969,7 @@ async function addToCart(id) {
     }
 }
 
+// Aumenta o disminuye la cantidad de un producto (+ o -)
 async function cambiarCantidad(id, n) {
     let item = cart.find(x => x.id === id);
     if(!item) return;
@@ -908,6 +983,7 @@ async function cambiarCantidad(id, n) {
     }
 }
 
+// Elimina el producto entero del carrito
 async function removeFromCart(id) {
     cart = cart.filter(i => i.id !== id);
     if (currentUser) {
@@ -923,6 +999,7 @@ async function removeFromCart(id) {
     }
 }
 
+// Abre/cierra la barra lateral del carrito
 function toggleCart() {
     const sidebar = document.getElementById('cart-sidebar');
     const overlay = document.getElementById('cart-overlay');
@@ -944,6 +1021,7 @@ function toggleCart() {
     } else history.back();
 }
 
+// Menú lateral móvil
 function toggleMobileMenu() { 
     const sidebar = document.getElementById('left-sidebar');
     if(!sidebar) return;
@@ -975,6 +1053,7 @@ function forceCloseCart() {
     }
 }
 
+// Dibuja el HTML dentro de la barra lateral del carrito
 function updateCartUI() {
     try { localStorage.setItem('tiococo_cart', JSON.stringify(cart)); } catch (e) {}
     const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
@@ -997,8 +1076,8 @@ function updateCartUI() {
     } else {
         if(list) list.innerHTML = cart.map((p) => `
             <div class="flex gap-4 items-center bg-gray-50 p-3 rounded-xl border border-gray-100 hover:border-beige/20 transition-all">
-                <div class="w-14 h-14 rounded flex items-center justify-center bg-white border shrink-0">
-                    <i class="fa fa-hamburger text-2xl text-gray-300"></i>
+                <div class="w-14 h-14 rounded flex items-center justify-center bg-white border shrink-0 overflow-hidden">
+                    <img src="${escapeHTML(p.img)}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='${PLACEHOLDER_SVG}'">
                 </div>
                 <div class="flex-1 min-w-0">
                     <h4 class="font-bold text-xs text-gray-800 truncate">${escapeHTML(p.nombre)}</h4>
@@ -1023,6 +1102,7 @@ function updateCartUI() {
     calcularTotal();
 }
 
+// Calcula sumas y actualiza los precios finales en la UI
 function calcularTotal() {
     let subtotal = cart.reduce((sum, item) => sum + (item.precio * item.qty), 0);
     let envio = userProfile ? costoEnvio : 0;
@@ -1049,6 +1129,7 @@ function calcularTotal() {
     }
 }
 
+// Une el carrito local con el de la Base de Datos cuando inicias sesión
 async function sincronizarCarritoConBD() {
     if (!currentUser) return;
     const { data: dbCart, error } = await supabaseClient.from('cart_items').select('product_id, quantity').eq('user_id', currentUser.id);
@@ -1091,6 +1172,7 @@ async function sincronizarCarritoConBD() {
     updateCartUI();
 }
 
+// Sube el carrito a BD cada vez que agregas un producto (stand-by)
 async function syncCartToDB() {
     if (!currentUser) return;
     await supabaseClient.from('cart_items').delete().eq('user_id', currentUser.id);
@@ -1100,6 +1182,7 @@ async function syncCartToDB() {
     }
 }
 
+// Pantalla de carga mientras se manda el pedido a WhatsApp
 function mostrarLoaderPago(mostrar) {
     const loader = document.getElementById('payment-loader-modal');
     if(!loader) return;
@@ -1119,7 +1202,10 @@ function mostrarLoaderPago(mostrar) {
     }
 }
 
-// --- CHECKOUT ---
+// =========================================================================
+// CHECKOUT: ENVIAR PEDIDO A WHATSAPP
+// =========================================================================
+
 async function procesarCheckout() {
     if(cart.length === 0) return;
     if(!currentUser) { mostrarToast("Debes iniciar sesión para pedir", "info"); openAuthModal(); return; }
@@ -1141,6 +1227,7 @@ async function procesarCheckout() {
             for(const r of radiosDoc) { if(r.checked) tipoDocTexto = r.value; }
         }
 
+        // 1. Guardar "Order" en la base de datos
         const { data: orderData, error: orderError } = await supabaseClient.from('orders').insert({
             user_id: currentUser.id,
             total: totalPagarFinal,
@@ -1153,6 +1240,7 @@ async function procesarCheckout() {
 
         if (orderError) throw orderError;
 
+        // 2. Guardar el detalle de los productos comprados
         const orderItems = cart.map(item => ({
             order_id: orderData.id,
             product_id: item.id,
@@ -1161,11 +1249,13 @@ async function procesarCheckout() {
         }));
         await supabaseClient.from('order_items').insert(orderItems);
 
+        // 3. Vaciar el carrito de la base de datos
         await supabaseClient.from('cart_items').delete().eq('user_id', currentUser.id);
         cart = [];
         updateCartUI();
         mostrarLoaderPago(false);
 
+        // 4. Armar el mensaje para WhatsApp
         let mensaje = `🍔 *¡Hola Tiococo! Quiero hacer el pedido #${orderData.id}:*\n\n`;
         orderItems.forEach((item) => {
             const productoOriginal = db.find(p => p.id === item.product_id);
@@ -1185,6 +1275,7 @@ async function procesarCheckout() {
         if (userProfile.referencia) mensaje += `Referencia: ${userProfile.referencia}\n`;
         mensaje += `\nQuedo atento para coordinar el pago. ¡Gracias!`;
 
+        // 5. Redirigir a WhatsApp
         const encodedText = encodeURIComponent(mensaje);
         window.open(`https://wa.me/${WHATSAPP_NUM}?text=${encodedText}`, '_blank');
         forceCloseCart();
@@ -1196,12 +1287,16 @@ async function procesarCheckout() {
     }
 }
 
-// --- ADMINISTRADOR Y MODALES ---
+// =========================================================================
+// DISEÑO DEL MENÚ (CÓMO SE VEN LAS CARTAS)
+// =========================================================================
+
+// Estructura HTML de cada producto en la grilla principal
 function cardHTML(p) {
     return `
         <div class="bg-white rounded-2xl border border-gray-100 hover:border-beige/50 transition-all duration-300 group hover:shadow-lg relative flex flex-col h-full overflow-hidden shadow-sm">
-            <div class="relative h-48 md:h-56 bg-gray-50 p-2 cursor-pointer flex items-center justify-center" onclick="openProduct(${p.id})">
-                <i class="fa fa-hamburger text-6xl text-gray-300 group-hover:scale-110 transition duration-500"></i>
+            <div class="relative h-48 md:h-56 bg-gray-50 p-2 cursor-pointer flex items-center justify-center overflow-hidden" onclick="openProduct(${p.id})">
+                <img src="${escapeHTML(p.img)}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" alt="${escapeHTML(p.nombre)}" onerror="this.onerror=null; this.src='${PLACEHOLDER_SVG}'">
             </div>
             <div class="p-4 flex flex-col grow">
                 <h4 class="font-medium text-gray-800 text-sm mb-1 leading-snug line-clamp-2 grow">${escapeHTML(p.nombre)}</h4>
@@ -1213,6 +1308,7 @@ function cardHTML(p) {
         </div>`;
 }
 
+// Abre el modal grande de un producto
 function openProduct(id) {
     history.pushState({modal: 'product'}, null, "");
     const p = db.find(x => x.id === id);
@@ -1226,8 +1322,8 @@ function openProduct(id) {
             <div class="flex flex-col h-full relative">
                 <div class="flex-1 overflow-y-auto p-6 md:p-8 modal-body-scroll">
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-4">
-                        <div class="flex items-center justify-center bg-gray-50 rounded-2xl p-4 md:p-16 border border-gray-100">
-                            <i class="fa fa-hamburger text-8xl text-gray-300"></i>
+                        <div class="flex items-center justify-center bg-gray-50 rounded-2xl p-4 md:p-8 border border-gray-100 overflow-hidden">
+                            <img src="${escapeHTML(p.img)}" class="w-full max-h-72 object-contain" alt="${escapeHTML(p.nombre)}" onerror="this.onerror=null; this.src='${PLACEHOLDER_SVG}'">
                         </div>
                         <div class="flex flex-col justify-start">
                             <h1 class="text-2xl md:text-3xl font-black text-gray-900 mb-2 leading-tight">${escapeHTML(p.nombre)}</h1>
@@ -1258,6 +1354,11 @@ function closeProductModal() {
     history.back(); 
 }
 
+// =========================================================================
+// PANEL DE ADMINISTRADOR
+// =========================================================================
+
+// Abre la vista admin (solo si es admin)
 function openAdminModal() {
     history.pushState({modal: 'admin'}, null, "");
     const modal = document.getElementById('admin-modal');
@@ -1274,6 +1375,7 @@ function closeAdminModal() {
     if(history.state && history.state.modal === 'admin') history.back();
 }
 
+// Cambia entre las pestañas "Productos", "Nuevo" y "Pedidos" del admin
 function switchAdminTab(tab) {
     if (!userProfile?.esAdmin) {
         mostrarToast("Acceso no autorizado", "error");
@@ -1305,15 +1407,20 @@ function switchAdminTab(tab) {
     if (tab === 'pedidos') cargarPedidosLogistica();
 }
 
+// Limpia el formulario de crear/editar producto
 function cancelarEdicion() {
     const form = document.getElementById('producto-form');
     if(form) form.reset();
     
     const inputId = document.getElementById('producto-id');
+    const inputUrl = document.getElementById('producto-imagen-url');
+    const previewDiv = document.getElementById('imagen-actual');
     const btnGuardar = document.getElementById('btn-guardar-producto');
     const titulo = document.getElementById('form-titulo');
     
     if(inputId) inputId.value = '';
+    if(inputUrl) inputUrl.value = '';
+    if(previewDiv) previewDiv.classList.add('hidden');
     if(btnGuardar) btnGuardar.innerText = 'Crear Producto';
     if(titulo) titulo.innerText = 'Agregar Nuevo Producto';
     
@@ -1321,6 +1428,7 @@ function cancelarEdicion() {
     switchAdminTab('productos');
 }
 
+// Descarga todos los productos para la tabla de inventario del Admin
 async function cargarProductosAdmin() {
     const { data, error } = await supabaseClient.from('productos').select('*').order('id', { ascending: false });
     if (error) { mostrarToast("Error al cargar", "error"); return; }
@@ -1329,6 +1437,7 @@ async function cargarProductosAdmin() {
     aplicarFiltrosAdmin();
 }
 
+// Filtra la tabla de productos del admin si usas el buscador
 function aplicarFiltrosAdmin() {
     let filtrados = adminDb;
     
@@ -1348,6 +1457,7 @@ function filtrarAdmin(query) {
     aplicarFiltrosAdmin();
 }
 
+// Dibuja la lista de inventario en el Panel Admin
 function renderListaAdmin(lista) {
     const container = document.getElementById('admin-productos-list');
     if(!container) return;
@@ -1358,8 +1468,8 @@ function renderListaAdmin(lista) {
     container.innerHTML = lista.map(p => `
         <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded bg-white border flex items-center justify-center shrink-0">
-                    <i class="fa fa-hamburger text-gray-300"></i>
+                <div class="w-12 h-12 rounded bg-white border flex items-center justify-center shrink-0 overflow-hidden">
+                    <img src="${escapeHTML(p.foto || PLACEHOLDER_SVG)}" class="w-full h-full object-cover">
                 </div>
                 <div>
                     <p class="font-bold text-sm text-gray-800">${escapeHTML(p.producto)}</p>
@@ -1374,6 +1484,7 @@ function renderListaAdmin(lista) {
     `).join('');
 }
 
+// Llena el formulario de "Nuevo producto" con los datos del producto a editar
 function editarProducto(id) {
     const data = adminDb.find(x => x.id === id);
     if (!data) return;
@@ -1385,6 +1496,9 @@ function editarProducto(id) {
     const iSku = document.getElementById('producto-sku');
     const iPre = document.getElementById('producto-precio');
     const iDesc = document.getElementById('producto-desc');
+    const iUrl = document.getElementById('producto-imagen-url');
+    const previewDiv = document.getElementById('imagen-actual');
+    const previewImg = document.getElementById('imagen-preview');
     const btnG = document.getElementById('btn-guardar-producto');
     const tit = document.getElementById('form-titulo');
 
@@ -1393,6 +1507,15 @@ function editarProducto(id) {
     if(iSku) iSku.value = data.numero_producto || '';
     if(iPre) iPre.value = data.precio;
     if(iDesc) iDesc.value = data.descripcion || '';
+    if(iUrl) iUrl.value = data.foto || ''; // Guardamos la URL vieja de forma invisible
+    
+    // Si ya tenía imagen, mostramos el preview
+    if(data.foto && previewDiv && previewImg) {
+        previewImg.src = data.foto;
+        previewDiv.classList.remove('hidden');
+    } else if (previewDiv) {
+        previewDiv.classList.add('hidden');
+    }
     
     if(btnG) btnG.innerText = 'Guardar Cambios';
     if(tit) tit.innerText = `Editar: ${escapeHTML(data.producto)}`;
@@ -1400,6 +1523,9 @@ function editarProducto(id) {
     switchAdminTab('nuevo');
 }
 
+// =========================================================================
+// 🚀 LÓGICA DE SUBIDA DE IMÁGENES AL BUCKET
+// =========================================================================
 async function guardarProducto(e) {
     e.preventDefault();
     const btn = document.getElementById('btn-guardar-producto');
@@ -1410,6 +1536,8 @@ async function guardarProducto(e) {
     const precio = parseFloat(document.getElementById('producto-precio').value);
     const desc = document.getElementById('producto-desc').value;
     const productoId = document.getElementById('producto-id').value;
+    
+    let imageUrl = document.getElementById('producto-imagen-url') ? document.getElementById('producto-imagen-url').value : '';
 
     if (precio < 0) { 
         mostrarToast("El precio no puede ser negativo", "error"); 
@@ -1418,11 +1546,36 @@ async function guardarProducto(e) {
     }
 
     try {
+        // 1. VERIFICAMOS SI SELECCIONÓ UN ARCHIVO WEBP
+        const fileInput = document.getElementById('producto-imagen-file');
+        
+        if (fileInput && fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            
+            // Validar que sea WebP
+            if (file.type !== 'image/webp') {
+                throw new Error("Por favor, sube solo imágenes en formato .webp");
+            }
+            
+            // Nombre único para no chocar con otras fotos: tiempo + nombrearchivo
+            const fileName = `${Date.now()}_${file.name}`;
+            
+            // Subimos al bucket 'imagenes'
+            const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('imagenes').upload(fileName, file);
+            if (uploadError) throw uploadError;
+            
+            // Obtenemos la URL pública para mostrarla a los clientes
+            const { data: publicUrlData } = supabaseClient.storage.from('imagenes').getPublicUrl(fileName);
+            imageUrl = publicUrlData.publicUrl;
+        }
+
+        // 2. GUARDAMOS EL REGISTRO EN LA BASE DE DATOS
         const productoData = {
             producto: nombre,
             numero_producto: sku,
             precio: precio,
             descripcion: desc,
+            foto: imageUrl, // Agregamos el link de la foto
             destacado: 0
         };
 
@@ -1446,6 +1599,7 @@ async function guardarProducto(e) {
     }
 }
 
+// Elimina producto del catálogo
 async function eliminarProducto(id) {
     if (!confirm("¿Estás seguro de eliminar este producto?")) return;
     const { error } = await supabaseClient.from('productos').delete().eq('id', id);
@@ -1458,6 +1612,7 @@ async function eliminarProducto(id) {
     }
 }
 
+// Carga las órdenes recibidas en el panel del administrador
 async function cargarPedidosLogistica() {
     const container = document.getElementById('admin-lista-pedidos');
     if(!container) return;
@@ -1552,6 +1707,7 @@ async function cargarPedidosLogistica() {
     }
 }
 
+// Permite al admin mover la orden a despachado, entregado, etc.
 async function cambiarEstadoPedido(id, nuevoEstado) {
     if (nuevoEstado === 'Entregado') {
         if (!confirm("¿Confirmas que el pedido ha sido entregado?")) {
@@ -1564,6 +1720,11 @@ async function cambiarEstadoPedido(id, nuevoEstado) {
     else { mostrarToast(`Pedido #${id} actualizado`, "success"); cargarPedidosLogistica(); }
 }
 
+// =========================================================================
+// UTILIDADES COMPARTIDAS
+// =========================================================================
+
+// Dibuja el cuadrito negro o rojo en la parte de abajo de la pantalla
 function mostrarToast(msg, type = 'success') {
     const t = document.getElementById('toast-modal');
     const c = document.getElementById('toast-content');
@@ -1576,6 +1737,7 @@ function mostrarToast(msg, type = 'success') {
     setTimeout(() => { t.classList.remove('toast-visible'); setTimeout(() => t.classList.add('hidden'), 300); }, 2500);
 }
 
+// Permite cerrar modales deslizando el dedo en el celular
 function initSwipeGestures() {
     let touchStartX = 0, touchStartY = 0;
     document.addEventListener('touchstart', function(e) { 
