@@ -5,34 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <link rel="icon" type="image/webp" href="imagenes/logo.webp">
-    <title>Tiococo | Comida Rápida</title>
-    <meta name="description" content="Tu comida rápida favorita directo a tu casa.">
+    <title>Tiococo | Comida Rápida a tu puerta</title>
+    <meta name="description" content="Tu comida rápida favorita directo a tu casa. Rápido, rico y al mejor precio.">
     
-    <meta property="og:title" content="Tiococo | Menú Online">
+    <meta property="og:title" content="Tiococo | Inicio">
     <meta property="og:description" content="Pide rápido, come delicioso.">
     <meta property="og:image" content="imagenes/logo.webp"> 
     <meta property="og:type" content="website">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        beige: '#D2B48C',
+                    }
+                }
+            }
+        }
+    </script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <link rel="stylesheet" href="css/estilos.css">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          beige: '#D2B48C',
-        }
-      }
-    }
-  }
-</script>
 </head>
-<body class="font-sans antialiased overflow-x-hidden">
+<body class="font-sans antialiased overflow-x-hidden bg-gray-50/30">
 
     <header class="fixed top-0 w-full bg-white z-[50] border-b border-gray-50 h-20 shadow-sm transition-all duration-300 header-desktop-adjust">
         <div class="h-full grid grid-cols-3 items-center px-4 md:px-6">
@@ -41,15 +40,15 @@
             </div>
             
             <div class="flex justify-center">
-                <div onclick="resetAndScrollToTop()" class="inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-50 shadow-sm cursor-pointer hover:bg-gray-50 transition-all active:scale-95">
+                <a href="index.html" class="inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-50 shadow-sm cursor-pointer hover:bg-gray-50 transition-all active:scale-95 no-underline">
                     <i class="fa fa-hamburger text-beige text-xl"></i>
                     <h1 class="text-base md:text-xl font-black tracking-widest text-gray-800 uppercase whitespace-nowrap">Tio<span class="text-beige">coco</span></h1>
-                </div>
+                </a>
             </div>
 
             <div class="flex justify-end items-center gap-3">
                 <div class="hidden lg:block relative group mr-2">
-                    <input type="text" id="search-desktop" onkeyup="buscar(this.value)" placeholder="Buscar hamburguesa, combo..." class="bg-gray-50/50 border border-transparent rounded-full px-5 py-2.5 w-64 text-sm focus:ring-1 focus:ring-beige focus:bg-white focus:border-beige transition-all">
+                    <input type="text" id="search-desktop" onkeyup="buscar(this.value)" placeholder="Buscar hamburguesa, combo..." class="bg-gray-50/50 border border-transparent rounded-full px-5 py-2.5 w-64 text-sm focus:ring-1 focus:ring-beige focus:bg-white focus:border-beige transition-all outline-none">
                     <i class="fa fa-search absolute right-4 top-3 text-beige"></i>
                 </div>
                 <button onclick="openAuthModal()" class="relative p-2 group" id="user-btn-header">
@@ -63,7 +62,6 @@
             </div>
         </div>
     </header>
-
     <div id="menu-overlay" class="overlay-base" onclick="handleBackAction()"></div>
     <div id="cart-overlay" class="overlay-base" onclick="forceCloseCart()"></div>
 
@@ -183,14 +181,21 @@
                 <i class="fa fa-user-circle text-lg"></i> <span id="mobile-menu-user-txt">Mi Cuenta</span>
             </button>
 
+            <div class="space-y-3 mb-6">
+                <a href="menu.html" class="block w-full text-left px-5 py-3 rounded-xl bg-white text-gray-800 font-bold shadow-sm hover:shadow-md transition-all border border-gray-100 hover:border-beige text-sm">
+                    <i class="fa fa-book-open w-6 text-gray-400"></i> Ver Menú Completo
+                </a>
+            </div>
+
             <div id="admin-menu-item" class="hidden mb-4">
-                <button onclick="openAdminModal()" class="w-full text-left px-5 py-4 rounded-xl bg-amber-100 text-amber-800 font-bold flex items-center gap-3 transition-all shadow-md hover:bg-amber-200">
-                    <i class="fa fa-cog"></i> Panel Administración
+                <button onclick="openAdminModal()" class="w-full text-left px-5 py-4 rounded-xl bg-amber-100 text-amber-800 font-bold flex items-center gap-3 transition-all shadow-md hover:bg-amber-200 text-sm">
+                    <i class="fa fa-cog w-5"></i> Panel de Administración
                 </button>
             </div>
 
             <nav class="space-y-2" id="nav-categorias"></nav>
         </div>
+        
         <div class="p-8 border-t border-gray-100 bg-white/50">
             <h4 class="text-xs font-black uppercase text-gray-400 mb-4 tracking-widest">Síguenos</h4>
             <div class="flex gap-6 text-2xl text-gray-400">
@@ -202,85 +207,75 @@
         </div>
     </aside>
 
-    <main id="main-content" class="pt-28 px-4 md:px-12 layout-desktop min-h-screen">
+    <main id="main-content" class="pt-20 layout-desktop min-h-screen">
         
-        <div class="lg:hidden sticky-search-container">
-            <div class="relative w-full">
-                <input type="text" id="search-mobile" onkeyup="buscar(this.value)" placeholder="Buscar producto..." class="w-full bg-gray-50 border border-transparent p-4 pl-12 rounded-2xl shadow-sm focus:ring-1 focus:ring-beige focus:bg-white transition">
-                <i class="fa fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-beige"></i>
-            </div>
-        </div>
-
-        <section id="hero-section" class="relative glass-panel text-gray-800 py-12 px-6 md:px-12 mb-12 rounded-[2rem] overflow-hidden shadow-lg fade-in-up hidden">
-            <div class="relative z-10 max-w-6xl mx-auto">
-                <div class="text-center mb-8">
-                    <span class="inline-block py-1.5 px-4 rounded-full bg-black text-white font-bold text-[10px] md:text-xs tracking-widest uppercase mb-4 shadow-sm">Menú Online</span>
-                    <h2 class="text-3xl md:text-5xl font-black mb-4 leading-tight text-gray-900 tracking-tight">
-                        Rápido, Rico y <span class="text-beige italic font-serif">A la puerta de tu casa.</span>
-                    </h2>
-                </div>
-                <div class="mt-8 border-t border-gray-200 pt-8">
-                    <h3 class="text-center font-bold text-gray-400 text-xs uppercase tracking-widest mb-6">🔥 Los más pedidos</h3>
-                    <div id="hero-destacados-container" class="mobile-slider destacados-grid-pc pb-2"></div>
-                </div>
+        <section class="relative w-full h-[70vh] md:h-[80vh] bg-black overflow-hidden animate-fade-in">
+            <img src="imagenes/fondo.webp" alt="Hamburguesas Tiococo" class="absolute inset-0 w-full h-full object-cover opacity-60 hover:scale-105 transition-transform duration-1000">
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 z-10">
+                <span class="inline-block py-1.5 px-4 rounded-full bg-beige text-black font-black text-xs tracking-widest uppercase mb-4 shadow-lg">El verdadero sabor</span>
+                <h2 class="text-5xl md:text-7xl font-black text-white mb-8 drop-shadow-lg tracking-tight">Cuidado,<br>mucha sabrosura.</h2>
+                <a href="menu.html" class="bg-white text-black px-8 py-4 rounded-full font-black uppercase tracking-widest hover:bg-beige transition shadow-2xl hover:-translate-y-1">Ver Menú Completo</a>
             </div>
         </section>
 
-        <section class="mb-16 py-10 px-4 bg-white/95 border-2 border-gray-100 rounded-3xl shadow-md">
-            <h3 class="text-center font-black text-gray-900 text-sm uppercase tracking-widest mb-10 border-b pb-4 border-gray-200">
+        <section class="flex flex-col md:flex-row w-full h-auto md:h-[60vh] bg-[#F6F4EC]">
+            <div class="w-full md:w-1/2 p-12 md:p-20 flex flex-col justify-center items-start">
+                <h3 class="text-4xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">Pide Tiococo<br>desde tu casa</h3>
+                <p class="text-gray-600 text-lg mb-8">¿Antojo de burger? Pídela fácil, disfrútala donde quieras. Tu comida favorita, en tu momento perfecto.</p>
+                <a href="menu.html" class="bg-black text-white px-8 py-4 rounded-full font-black uppercase tracking-widest hover:bg-gray-800 transition shadow-lg inline-block">Pedir Ahora</a>
+            </div>
+            <div class="w-full md:w-1/2 h-[40vh] md:h-full overflow-hidden">
+                <img src="imagenes/logo.webp" alt="Delivery Tiococo" class="w-full h-full object-cover bg-white p-20"> 
+            </div>
+        </section>
+
+        <section class="py-20 px-4 bg-white border-t border-gray-100">
+            <h3 class="text-center font-black text-gray-900 text-2xl md:text-3xl uppercase tracking-widest mb-16">
                 <i class="fa fa-motorcycle text-beige mr-2"></i> ¿Cómo pedir?
             </h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div class="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                 <div class="flex flex-col items-center group">
-                    <div class="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center text-xl mb-4 shadow-lg"><i class="fa fa-hamburger"></i></div>
-                    <span class="font-black text-gray-900 text-base">1. Elige</span>
-                    <p class="text-xs font-bold text-gray-500 mt-2 px-2 leading-tight">Arma tu carrito</p>
+                    <div class="w-20 h-20 bg-gray-50 text-gray-900 rounded-full flex items-center justify-center text-3xl mb-6 shadow-sm group-hover:bg-beige group-hover:text-white transition-colors duration-300"><i class="fa fa-hamburger"></i></div>
+                    <span class="font-black text-gray-900 text-lg">1. Elige</span>
+                    <p class="text-sm text-gray-500 mt-2 px-2 leading-relaxed">Arma tu carrito con tus favoritos.</p>
                 </div>
                 <div class="flex flex-col items-center group">
-                    <div class="w-14 h-14 bg-[#25D366] text-white rounded-2xl flex items-center justify-center text-xl mb-4 shadow-lg"><i class="fab fa-whatsapp"></i></div>
-                    <span class="font-black text-gray-900 text-base">2. Envía</span>
-                    <p class="text-xs font-bold text-gray-500 mt-2 px-2 leading-tight">Pide por WhatsApp</p>
+                    <div class="w-20 h-20 bg-gray-50 text-[#25D366] rounded-full flex items-center justify-center text-3xl mb-6 shadow-sm group-hover:bg-[#25D366] group-hover:text-white transition-colors duration-300"><i class="fab fa-whatsapp"></i></div>
+                    <span class="font-black text-gray-900 text-lg">2. Envía</span>
+                    <p class="text-sm text-gray-500 mt-2 px-2 leading-relaxed">Manda tu pedido por WhatsApp.</p>
                 </div>
                 <div class="flex flex-col items-center group">
-                    <div class="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center text-xl mb-4 shadow-lg"><i class="fa fa-money-bill-wave"></i></div>
-                    <span class="font-black text-gray-900 text-base">3. Paga</span>
-                    <p class="text-xs font-bold text-gray-500 mt-2 px-2 leading-tight">Transferencia o Efectivo</p>
+                    <div class="w-20 h-20 bg-gray-50 text-gray-900 rounded-full flex items-center justify-center text-3xl mb-6 shadow-sm group-hover:bg-beige group-hover:text-white transition-colors duration-300"><i class="fa fa-money-bill-wave"></i></div>
+                    <span class="font-black text-gray-900 text-lg">3. Paga</span>
+                    <p class="text-sm text-gray-500 mt-2 px-2 leading-relaxed">Transferencia o Efectivo.</p>
                 </div>
                 <div class="flex flex-col items-center group">
-                    <div class="w-14 h-14 bg-black text-white rounded-2xl flex items-center justify-center text-xl mb-4 shadow-lg"><i class="fa fa-home"></i></div>
-                    <span class="font-black text-gray-900 text-base">4. Disfruta</span>
-                    <p class="text-xs font-bold text-gray-500 mt-2 px-2 leading-tight">Recibe en tu puerta</p>
+                    <div class="w-20 h-20 bg-gray-50 text-gray-900 rounded-full flex items-center justify-center text-3xl mb-6 shadow-sm group-hover:bg-black group-hover:text-white transition-colors duration-300"><i class="fa fa-home"></i></div>
+                    <span class="font-black text-gray-900 text-lg">4. Disfruta</span>
+                    <p class="text-sm text-gray-500 mt-2 px-2 leading-relaxed">Recibe la comida en tu puerta.</p>
                 </div>
+            </div>
+            
+            <div class="text-center mt-16">
+                 <a href="menu.html" class="bg-beige text-white px-8 py-4 rounded-full font-black uppercase tracking-widest hover:bg-amber-600 transition shadow-lg inline-block">Ir al Menú</a>
             </div>
         </section>
 
-        <div id="loading-msg" class="text-center py-20 glass-panel rounded-2xl mb-10">
-            <i class="fa fa-circle-notch fa-spin text-4xl text-beige mb-4"></i>
-            <p class="text-gray-900 font-bold">Cargando menú...</p>
-        </div>
-
-        <section id="seccion-catalogo" class="hidden mb-12">
-            <div class="glass-panel p-6 rounded-2xl mb-6 flex items-center justify-between shadow-sm">
-                <h2 id="titulo-grid" class="text-xl font-black text-gray-900 uppercase tracking-widest">Catálogo</h2>
-                <span id="cantidad-productos" class="text-xs font-bold text-white bg-black px-3 py-1.5 rounded-lg">0</span>
-            </div>
-            
-            <div id="grid-productos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8 mb-8"></div>
-            
-            <div id="pagination-controls" class="flex justify-center items-center gap-4 py-6 hidden">
-                <button onclick="changePage(-1)" id="btn-prev" class="bg-white px-4 py-2 rounded-full shadow font-bold text-sm border">Anterior</button>
-                <span id="page-indicator" class="font-bold text-gray-900 bg-white px-4 py-2 rounded-full shadow border">Pág 1</span>
-                <button onclick="changePage(1)" id="btn-next" class="bg-black text-white px-6 py-2 rounded-full shadow font-bold text-sm disabled:opacity-50">Siguiente</button>
-            </div>
-        </section>
-
-        <footer class="max-w-6xl mx-auto mt-20 border-t border-gray-200 pt-10 pb-6 text-xs text-gray-500">
-            <div class="text-center">
-                <h4 class="font-bold text-gray-700 mb-2 uppercase tracking-wider">Tiococo Comida Rápida</h4>
-                <p class="mb-2">La mejor comida, directo a tu mesa.</p>
-                <p>© 2026 Tiococo - Todos los derechos reservados.</p>
+        <footer class="bg-black text-white py-12 px-6">
+            <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="text-center md:text-left">
+                    <h1 class="text-3xl font-black tracking-widest uppercase">Tio<span class="text-beige">coco</span></h1>
+                    <p class="text-gray-400 text-sm mt-2">La mejor comida, directo a tu mesa.</p>
+                    <p class="text-gray-500 text-xs mt-1">© 2026 Todos los derechos reservados.</p>
+                </div>
+                <div class="flex gap-6 text-3xl">
+                    <a href="#" target="_blank" class="hover:text-beige transition hover:-translate-y-1"><i class="fab fa-instagram"></i></a>
+                    <a href="#" target="_blank" class="hover:text-beige transition hover:-translate-y-1"><i class="fab fa-tiktok"></i></a>
+                    <a href="https://wa.me/56936416743" target="_blank" class="hover:text-[#25D366] transition hover:-translate-y-1"><i class="fab fa-whatsapp"></i></a>
+                </div>
             </div>
         </footer>
+
     </main>
 
     <aside id="cart-sidebar" class="fixed inset-y-0 right-0 w-full md:w-[420px] bg-white z-[160] shadow-2xl transform translate-x-full flex flex-col h-full">
@@ -343,13 +338,6 @@
         <span id="desktop-floating-total">$0</span>
     </button>
 
-    <div id="product-modal" onclick="if(event.target === this) closeProductModal()" class="fixed inset-0 z-[200] bg-black bg-opacity-50 hidden items-center justify-center p-4">
-        <div class="bg-white product-modal-desktop w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl shadow-2xl relative h-full">
-            <button onclick="closeProductModal()" class="absolute top-4 right-4 z-50 bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg text-lg hover:bg-red-100 hover:text-red-500 transition">✕</button>
-            <div id="modal-content" class="flex-1 flex flex-col overflow-hidden relative h-full"></div>
-        </div>
-    </div>
-
     <div id="order-detail-modal" class="fixed inset-0 z-[300] bg-white hidden flex-col modal-full-screen overflow-hidden">
         <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
             <h3 class="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tight">Detalle de tu Pedido</h3>
@@ -406,16 +394,14 @@
                         </div>
                         <div><label class="text-xs font-bold text-gray-500 uppercase ml-1">Descripción</label><textarea id="producto-desc" rows="3" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl text-sm outline-none"></textarea></div>
                         <div>
-    <label class="text-xs font-bold text-gray-500 uppercase ml-1">Imagen (Solo WebP)</label>
-    <input type="file" id="producto-imagen-file" accept="image/webp" class="w-full p-2 bg-white border border-gray-300 rounded-xl text-sm outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-beige file:text-gray-900 hover:file:bg-amber-600 transition">
-    
-    <input type="hidden" id="producto-imagen-url" value="">
-    
-    <div id="imagen-actual" class="mt-3 hidden">
-        <p class="text-xs text-gray-500 mb-1">Imagen actual:</p>
-        <img id="imagen-preview" src="" class="h-24 w-24 object-cover border-2 border-gray-200 rounded-xl shadow-sm">
-    </div>
-</div>
+                            <label class="text-xs font-bold text-gray-500 uppercase ml-1">Imagen (Solo WebP)</label>
+                            <input type="file" id="producto-imagen-file" accept="image/webp" class="w-full p-2 bg-white border border-gray-300 rounded-xl text-sm outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-beige file:text-gray-900 hover:file:bg-amber-600 transition">
+                            <input type="hidden" id="producto-imagen-url" value="">
+                            <div id="imagen-actual" class="mt-3 hidden">
+                                <p class="text-xs text-gray-500 mb-1">Imagen actual:</p>
+                                <img id="imagen-preview" src="" class="h-24 w-24 object-cover border-2 border-gray-200 rounded-xl shadow-sm">
+                            </div>
+                        </div>
                         <div class="flex gap-3 pt-4 border-t border-gray-200 mt-4">
                             <button type="submit" id="btn-guardar-producto" class="bg-beige text-gray-900 py-3 px-8 rounded-xl font-bold uppercase text-sm shadow-md hover:bg-amber-600 transition">Crear Producto</button>
                             <button type="button" onclick="cancelarEdicion()" class="border border-gray-300 py-3 px-8 rounded-xl font-bold uppercase text-sm hover:bg-gray-100 transition">Cancelar</button>
