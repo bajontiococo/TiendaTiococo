@@ -57,26 +57,68 @@ const PLACEHOLDER_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000
 // INICIALIZACIÓN (CUANDO LA PÁGINA CARGA)
 // =========================================================================
 
-// Controla el botón "Atrás" del celular para cerrar modales en vez de salir de la página
-window.addEventListener('popstate', function(event) {
-    const modal = document.getElementById('product-modal');
-    const authModal = document.getElementById('auth-modal');
-    const cartSidebar = document.getElementById('cart-sidebar');
-    const leftSidebar = document.getElementById('left-sidebar');
-    const adminModal = document.getElementById('admin-modal');
-    const stickyBar = document.getElementById('mobile-sticky-bar');
+window.addEventListener('DOMContentLoaded', () => { 
+    verificarSesion(); 
+    cargarSelectoresRegion(); 
 
-    if (modal && !modal.classList.contains('hidden')) { modal.classList.add('hidden'); document.body.classList.remove('locked'); }
-    if (authModal && !authModal.classList.contains('hidden')) { closeAuthModal(); }
-    if (adminModal && !adminModal.classList.contains('hidden')) { closeAdminModal(); }
-    if (cartSidebar && cartSidebar.classList.contains('translate-x-0')) { forceCloseCart(); }
-    if (leftSidebar && !leftSidebar.classList.contains('-translate-x-full')) {
-        leftSidebar.classList.add('-translate-x-full');
-        document.getElementById('menu-overlay').classList.remove('open');
-        document.body.classList.remove('locked');
-        if(cart.length > 0 && window.innerWidth < 1024) stickyBar.classList.remove('translate-y-full');
+    // 1. Verificar si hay un parámetro de búsqueda en la URL (ej: menu.html?q=completo)
+    const params = new URLSearchParams(window.location.search);
+    const queryUrl = params.get('q');
+
+    // 2. Solo intentamos cargar el menú si estamos en menu.html (si existe el contenedor)
+    const contenedorGrid = document.getElementById('grid-productos');
+    
+    if (contenedorGrid) {
+        if (queryUrl) {
+            // Si venimos del index con una búsqueda, rellenamos el input y preparamos la variable
+            const searchDesktop = document.getElementById('search-desktop');
+            const searchMobile = document.getElementById('search-mobile');
+            if(searchDesktop) searchDesktop.value = queryUrl;
+            if(searchMobile) searchMobile.value = queryUrl;
+            
+            busquedaActual = queryUrl.toLowerCase();
+            lastSearch = queryUrl;
+        }
+        cargarProductosPagina(1); 
     }
+
+    updateCartUI(); 
+    initSwipeGestures(); 
 });
+
+
+// =========================================================================
+// NUEVA FUNCIÓN DE BÚSQUEDA REDIRECCIONADA
+// =========================================================================
+
+function buscar(query) {
+    // Si estamos en el index.html (no hay grilla de productos)
+    if (!document.getElementById('grid-productos')) {
+        // Redirigimos al usuario a menu.html y le pasamos lo que escribió en la URL
+        // (Usamos encodeURIComponent para que espacios y tildes no rompan la URL)
+        window.location.href = `menu.html?q=${encodeURIComponent(query)}`;
+        return; // Detenemos la función aquí
+    }
+
+    // Si estamos en menu.html, hacemos la búsqueda normal con Supabase
+    if (query === lastSearch) return;
+    lastSearch = query;
+    clearTimeout(searchTimeout); 
+    
+    searchTimeout = setTimeout(() => {
+        busquedaActual = query.toLowerCase();
+        currentPage = 1;
+        
+        const tituloGrid = document.getElementById('titulo-grid');
+        if (busquedaActual.length > 0) {
+            if(tituloGrid) tituloGrid.innerText = `Resultados para "${query}"`;
+        } else {
+            if(tituloGrid) tituloGrid.innerText = 'Nuestro Menú';
+        }
+        
+        cargarProductosPagina(1);
+    }, 500);
+}
 
 // Lo primero que ejecuta la página al terminar de cargar el HTML
 window.addEventListener('DOMContentLoaded', () => { 
