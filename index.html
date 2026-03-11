@@ -62,6 +62,7 @@
             </div>
         </div>
     </header>
+    
     <div id="menu-overlay" class="overlay-base" onclick="handleBackAction()"></div>
     <div id="cart-overlay" class="overlay-base" onclick="forceCloseCart()"></div>
 
@@ -209,12 +210,9 @@
 
     <main id="main-content" class="pt-20 layout-desktop min-h-screen">
         
-        <section class="relative w-full h-[70vh] md:h-[80vh] bg-black overflow-hidden animate-fade-in">
-            <img src="imagenes/fondo.webp" alt="Hamburguesas Tiococo" class="absolute inset-0 w-full h-full object-cover opacity-60 hover:scale-105 transition-transform duration-1000">
-            <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 z-10">
-                <span class="inline-block py-1.5 px-4 rounded-full bg-beige text-black font-black text-xs tracking-widest uppercase mb-4 shadow-lg">El verdadero sabor</span>
-                <h2 class="text-5xl md:text-7xl font-black text-white mb-8 drop-shadow-lg tracking-tight">Cuidado,<br>mucha sabrosura.</h2>
-                <a href="menu.html" class="bg-white text-black px-8 py-4 rounded-full font-black uppercase tracking-widest hover:bg-beige transition shadow-2xl hover:-translate-y-1">Ver Menú Completo</a>
+        <section id="destacados-edge-to-edge" class="w-full flex flex-col md:flex-row min-h-[80vh] bg-black overflow-hidden animate-fade-in">
+            <div class="w-full h-full flex items-center justify-center py-20">
+                <i class="fa fa-circle-notch fa-spin text-4xl text-beige opacity-50"></i>
             </div>
         </section>
 
@@ -277,7 +275,6 @@
         </footer>
 
     </main>
-
     <aside id="cart-sidebar" class="fixed inset-y-0 right-0 w-full md:w-[420px] bg-white z-[160] shadow-2xl transform translate-x-full flex flex-col h-full">
         <div class="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 flex-shrink-0">
             <h2 class="text-xl font-black uppercase text-gray-800">Tu Pedido</h2>
